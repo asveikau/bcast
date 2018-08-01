@@ -4,12 +4,43 @@
 use strict;
 
 use Socket;
+use Socket qw(IPPROTO_IP);
 use Fcntl;
 use Getopt::Long qw(GetOptions);
 
 my $name;
 my $server;
 my $port = 1985;
+
+# Ugly hack to return all broadcast addrs on FreeBSD, which
+# won't let us use 255.255.255.255 like others do.
+#
+my $freebsd = (`uname -s` eq "FreeBSD\n");
+my @freebsd_ifs;
+sub addrs
+{
+   if ($freebsd)
+   {
+      if (!scalar(@freebsd_ifs))
+      {
+         open(P, 'ifconfig |');
+         while (<P>)
+         {
+            chomp;
+            if ($_ =~ /broadcast ([0-9.]*)/)
+            {
+               push @freebsd_ifs, inet_aton($1);
+            }
+         }
+         close P;
+      }
+      return @freebsd_ifs;
+   }
+   else
+   {
+      return (INADDR_BROADCAST);
+   }
+}
 
 GetOptions(
    "n=s" => \$name,
@@ -33,12 +64,21 @@ if ($server)
 }
 else
 {
-   my $addr = sockaddr_in($port, INADDR_BROADCAST);
    setsockopt(FD, SOL_SOCKET, SO_BROADCAST, 1) or die 'SO_BROADCAST';
+
+   if ($freebsd)
+   {
+      my $IP_ONESBCAST = 0x17;
+      setsockopt(FD, IPPROTO_IP, $IP_ONESBCAST, 1) or die 'IP_ONESBCAST';
+   }
 
    for (;;)
    {
-      send(FD, "hello", 0, $addr) or die 'send';
+      foreach my $ip (addrs())
+      {
+         my $addr = sockaddr_in($port, $ip);
+         send(FD, "hello", 0, $addr) or die 'send';
+      }
 
       fcntl(FD, F_SETFL, O_NONBLOCK) or die 'fcntl';
 
