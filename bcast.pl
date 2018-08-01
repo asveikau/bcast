@@ -1,3 +1,4 @@
+#!/usr/bin/perl
 # bcast.pl copyright (c) 2018 andrew sveikauskas
 
 use strict;
