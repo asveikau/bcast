@@ -61,6 +61,7 @@ else
             {
                print "$remoteIp\n";
                $ok = 1;
+               last;
             }
          }
 
