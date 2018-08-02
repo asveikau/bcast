@@ -15,11 +15,13 @@ my $port = 1985;
 # Ugly hack to return all broadcast addrs on FreeBSD, which
 # won't let us use 255.255.255.255 like others do.
 #
-my $freebsd = (`uname -s` eq "FreeBSD\n");
+my $sys = `uname -s`;
+my $freebsd = ($sys eq "FreeBSD\n");
+my $obsd = ($sys eq "OpenBSD\n");
 my @freebsd_ifs;
 sub addrs
 {
-   if ($freebsd)
+   if ($freebsd || $obsd)
    {
       if (!scalar(@freebsd_ifs))
       {
