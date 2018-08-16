@@ -86,9 +86,10 @@ socket(FD, PF_INET, SOCK_DGRAM, getprotobyname('udp')) or die 'socket failed';
 
 if ($server)
 {
+   setsockopt(FD, SOL_SOCKET, SO_REUSEADDR, 1) or die 'SO_REUSEADDR';
+
    my $addr = sockaddr_in($port, INADDR_ANY);
    bind(FD, $addr) or die 'bind';
-   setsockopt(FD, SOL_SOCKET, SO_REUSEADDR, 1) or die 'SO_REUSEADDR';
 
    my $buf;
    while (my $remoteAddr = recv(FD, $buf, 4096, 0))
