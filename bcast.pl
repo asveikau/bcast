@@ -15,23 +15,55 @@ my $port = 1985;
 # Ugly hack to return all broadcast addrs on FreeBSD, which
 # won't let us use 255.255.255.255 like others do.
 #
-my $sys = `uname -s`;
-my $freebsd = ($sys eq "FreeBSD\n");
-my $obsd = ($sys eq "OpenBSD\n");
+my $sys = $^O;
+my $freebsd = ($sys eq "freebsd");
+my $obsd = ($sys eq "openbsd");
+my $windows = ($sys eq "msys");
 my @freebsd_ifs;
 sub addrs
 {
-   if ($freebsd || $obsd)
+   if ($freebsd || $obsd || $windows)
    {
       if (!scalar(@freebsd_ifs))
       {
-         open(P, 'ifconfig |');
+         my $cmd = 'ifconfig';
+         if ($windows)
+         {
+            $cmd = 'ipconfig';
+         }
+         my $a; my $b; my $c; my $d;
+         open(P, "$cmd |");
          while (<P>)
          {
             chomp;
-            if ($_ =~ /broadcast ([0-9.]*)/)
+
+            my $addr;
+
+            if ($windows)
             {
-               push @freebsd_ifs, inet_aton($1);
+               if ($_ =~ /IPv4 Address.*: ([0-9.]*)/)
+               {
+                  $1 =~ /([0-9]*)\.([0-9]*)\.([0-9]*)\.([0-9]*)/;
+                  $a = $1; $b = $2; $c = $3; $d = $4;
+               }
+               elsif ($_ =~ /Subnet Mask.*: ([0-9.]*)/)
+               {
+                  my $subnet = $1;
+                  $subnet =~ /([0-9]*)\.([0-9]*)\.([0-9]*)\.([0-9]*)/;
+                  $addr = ((~($1+0)) & 0xff | $a) . "." . 
+                          ((~($2+0)) & 0xff | $b) . "." .
+                          ((~($3+0)) & 0xff | $c) . "." .
+                          ((~($4+0)) & 0xff | $d);
+               }
+            }
+            elsif ($_ =~ /broadcast ([0-9.]*)/)
+            {
+               $addr = $1;
+            }
+
+            if (!($addr eq ''))
+            {
+               push @freebsd_ifs, inet_aton($addr);
             }
          }
          close P;
