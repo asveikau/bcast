@@ -12,8 +12,10 @@ my $name;
 my $server;
 my $port = 1985;
 
-# Ugly hack to return all broadcast addrs on FreeBSD, which
-# won't let us use 255.255.255.255 like others do.
+# Ugly hack to return all broadcast addrs by shelling out to
+# ifconfig.  This is needed on platforms that won't use packets
+# to 255.255.255.255 as a hint to send on all interfaces.
+# (FreeBSD was the first such system tested.)
 #
 my $sys = $^O;
 my $freebsd = ($sys eq "freebsd");
